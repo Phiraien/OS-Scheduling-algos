@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CPU Scheduler Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #ffffff;
+    color: #1a1a1a;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  header {
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 24px 20px;
+    text-align: center;
+  }
+
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 4px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: #6b7280;
+  }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 28px 20px; }
+
+  .panel {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+
+  .panel-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .input-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+    align-items: end;
+  }
+
+  .field-group { display: flex; flex-direction: column; gap: 5px; }
+
+  label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #6b7280;
+  }
+
+  input[type="text"], input[type="number"], select {
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    color: #111827;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    padding: 8px 12px;
+    outline: none;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+  input:focus, select:focus { border-color: #2563eb; }
+  input::placeholder { color: #9ca3af; }
+
+  .btn {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 18px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .btn-add {
+    background: #2563eb;
+    color: #fff;
+  }
+  .btn-add:hover { background: #1d4ed8; }
+
+  .btn-simulate {
+    background: #16a34a;
+    color: #fff;
+    width: 100%;
+    padding: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 6px;
+  }
+  .btn-simulate:hover { background: #15803d; }
+
+  .btn-clear {
+    background: #fff;
+    color: #6b7280;
+    border: 1px solid #d1d5db;
+    font-size: 13px;
+    padding: 8px 16px;
+  }
+  .btn-clear:hover { background: #f9fafb; }
+
+  /* Algorithm selector */
+  .algo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+  .algo-card {
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 12px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    background: #fff;
+  }
+  .algo-card:hover { border-color: #2563eb; background: #eff6ff; }
+  .algo-card.active { border-color: #2563eb; background: #eff6ff; }
+  .algo-card input[type="radio"] { display: none; }
+  .algo-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 2px;
+  }
+  .algo-card.active .algo-name { color: #2563eb; }
+  .algo-desc { font-size: 11px; color: #6b7280; }
+
+  #rr-quantum-row { display: none; }
+  #rr-quantum-row.visible { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+
+  /* Process table */
+  .process-table { width: 100%; border-collapse: collapse; }
+  .process-table th {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+  }
+  .process-table td {
+    padding: 9px 12px;
+    font-size: 13px;
+    border-bottom: 1px solid #f3f4f6;
+    color: #374151;
+  }
+  .process-table tr:last-child td { border-bottom: none; }
+  .btn-remove {
+    background: #fff;
+    border: 1px solid #fca5a5;
+    color: #dc2626;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-remove:hover { background: #fef2f2; }
+
+  .pid-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid;
+  }
+
+  /* Stats */
+  .results-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .stat-card {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+  }
+  .stat-label { font-size: 11px; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .stat-value { font-size: 26px; font-weight: 700; color: #111827; }
+  .stat-unit { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+  /* Gantt */
+  .gantt-wrapper { overflow-x: auto; padding-bottom: 8px; }
+  .gantt-chart { display: flex; align-items: stretch; min-width: fit-content; margin-bottom: 4px; }
+  .gantt-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 50px;
+    height: 48px;
+    border-right: 2px solid #fff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: default;
+  }
+  .gantt-block.idle {
+    background: #f3f4f6 !important;
+    color: #9ca3af;
+    border: 1px dashed #d1d5db;
+    border-right: 2px solid #fff;
+  }
+  .gantt-time-row { position: relative; min-height: 24px; min-width: fit-content; }
+  .gantt-time-mark {
+    font-size: 11px;
+    color: #6b7280;
+    position: absolute;
+    padding-top: 5px;
+    white-space: nowrap;
+  }
+  .gantt-time-mark::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    height: 4px; width: 1px;
+    background: #9ca3af;
+  }
+
+  /* Results table */
+  .results-table { width: 100%; border-collapse: collapse; }
+  .results-table th {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    text-align: center;
+    padding: 9px 10px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+  }
+  .results-table td {
+    padding: 9px 10px;
+    font-size: 13px;
+    text-align: center;
+    border-bottom: 1px solid #f3f4f6;
+    color: #374151;
+  }
+  .results-table tr:last-child td { border-bottom: none; }
+  .results-table tr:hover td { background: #f9fafb; }
+  .highlight-val { font-weight: 600; color: #111827; }
+  .avg-row td { font-weight: 600; color: #2563eb; border-top: 1px solid #e5e7eb; background: #eff6ff; }
+
+  /* Comment */
+  .comment-box {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 6px;
+    padding: 16px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #374151;
+  }
+  .comment-box strong { color: #15803d; }
+
+  .error { color: #dc2626; font-size: 12px; margin-top: 6px; }
+  #results-section { display: none; }
+  .empty-state { text-align: center; padding: 28px; color: #9ca3af; font-size: 13px; }
+
+  @media (max-width: 600px) {
+    .algo-grid { grid-template-columns: 1fr; }
+    .input-row { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>CPU Scheduling Simulator</h1>
+  <div class="subtitle">FCFS &nbsp;·&nbsp; SJF &nbsp;·&nbsp; Round Robin</div>
+</header>
+
+<div class="container">
+
+  <!-- Algorithm Selection -->
+  <div class="panel">
+    <div class="panel-title">Select Algorithm</div>
+    <div class="algo-grid">
+      <label class="algo-card active" id="card-fcfs">
+        <input type="radio" name="algo" value="fcfs" checked>
+        <div class="algo-name">FCFS</div>
+        <div class="algo-desc">First Come First Serve</div>
+      </label>
+      <label class="algo-card" id="card-sjf">
+        <input type="radio" name="algo" value="sjf">
+        <div class="algo-name">SJF</div>
+        <div class="algo-desc">Shortest Job First</div>
+      </label>
+      <label class="algo-card" id="card-rr">
+        <input type="radio" name="algo" value="rr">
+        <div class="algo-name">RR</div>
+        <div class="algo-desc">Round Robin</div>
+      </label>
+    </div>
+
+    <div id="rr-quantum-row">
+      <div class="field-group" style="flex:0 0 200px">
+        <label>Time Quantum (ms)</label>
+        <input type="number" id="quantum" value="2" min="1" max="100">
+      </div>
+      <div style="font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--text-dim); margin-top:18px; line-height:1.6;">
+        Each process runs for at most<br>Q time units per turn.
+      </div>
+    </div>
+  </div>
+
+  <!-- Process Input -->
+  <div class="panel">
+    <div class="panel-title">Add Processes</div>
+    <div class="input-row">
+      <div class="field-group">
+        <label>Process ID</label>
+        <input type="text" id="pid" placeholder="e.g. P1" maxlength="6">
+      </div>
+      <div class="field-group">
+        <label>Arrival Time</label>
+        <input type="number" id="arrival" placeholder="0" min="0">
+      </div>
+      <div class="field-group">
+        <label>Burst Time</label>
+        <input type="number" id="burst" placeholder="1" min="1">
+      </div>
+      <div class="field-group" style="justify-content:flex-end">
+        <button class="btn btn-add" onclick="addProcess()">+ ADD</button>
+      </div>
+    </div>
+    <div id="input-error" class="error"></div>
+
+    <div id="process-list">
+      <div class="empty-state">No processes added yet. Add at least 2 to simulate.</div>
+    </div>
+  </div>
+
+  <!-- Simulate -->
+  <div class="panel">
+    <div class="panel-title">Simulate</div>
+    <button class="btn btn-simulate" onclick="simulate()">Run Simulation</button>
+    <div style="margin-top:10px; text-align:right;">
+      <button class="btn btn-clear" onclick="clearAll()">✕ Clear All</button>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="results-section">
+    <div class="panel animate-in" id="gantt-panel">
+      <div class="panel-title" id="gantt-title">Gantt Chart</div>
+      <div class="gantt-wrapper">
+        <div class="gantt-chart" id="gantt-chart"></div>
+        <div class="gantt-time-row" id="gantt-times"></div>
+      </div>
+    </div>
+
+    <div class="panel animate-in">
+      <div class="panel-title">Results Summary</div>
+      <div class="results-grid" id="stats-cards"></div>
+      <div style="overflow-x:auto;">
+        <table class="results-table" id="results-table"></table>
+      </div>
+    </div>
+
+    <div class="panel animate-in" id="comment-panel">
+      <div class="panel-title">Analysis &amp; Commentary</div>
+      <div class="comment-box" id="comment-box"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let processes = [];
+let pidCounter = 1;
+
+const COLORS = [
+  ['#00d4ff','#003a52'], ['#ff6b35','#52200f'], ['#00ff9d','#003320'],
+  ['#a78bfa','#2d1a52'], ['#facc15','#52400a'], ['#f472b6','#521a38'],
+  ['#34d399','#0a3322'], ['#fb923c','#522210'], ['#60a5fa','#0a2452'],
+  ['#e879f9','#400a52'],
+];
+
+function getColor(idx) { return COLORS[idx % COLORS.length]; }
+
+// ─── Algorithm selection UI ───────────────────────────────────────────────────
+document.querySelectorAll('input[name="algo"]').forEach(r => {
+  r.addEventListener('change', function() {
+    document.querySelectorAll('.algo-card').forEach(c => c.classList.remove('active'));
+    this.closest('.algo-card').classList.add('active');
+    const qRow = document.getElementById('rr-quantum-row');
+    qRow.classList.toggle('visible', this.value === 'rr');
+  });
+});
+
+// ─── Add Process ──────────────────────────────────────────────────────────────
+function addProcess() {
+  const pid = document.getElementById('pid').value.trim() || `P${pidCounter}`;
+  const arrival = parseInt(document.getElementById('arrival').value);
+  const burst = parseInt(document.getElementById('burst').value);
+  const errEl = document.getElementById('input-error');
+
+  if (!pid) { errEl.textContent = '⚠ Enter a Process ID'; return; }
+  if (isNaN(arrival) || arrival < 0) { errEl.textContent = '⚠ Arrival time must be ≥ 0'; return; }
+  if (isNaN(burst) || burst < 1) { errEl.textContent = '⚠ Burst time must be ≥ 1'; return; }
+  if (processes.find(p => p.pid === pid)) { errEl.textContent = '⚠ Process ID already exists'; return; }
+  errEl.textContent = '';
+
+  processes.push({ pid, arrival, burst, colorIdx: processes.length });
+  pidCounter++;
+  document.getElementById('pid').value = `P${pidCounter}`;
+  document.getElementById('arrival').value = '';
+  document.getElementById('burst').value = '';
+  document.getElementById('pid').focus();
+  renderTable();
+}
+
+// ─── Render Process Table ─────────────────────────────────────────────────────
+function renderTable() {
+  const el = document.getElementById('process-list');
+  if (processes.length === 0) {
+    el.innerHTML = '<div class="empty-state">No processes added yet.</div>';
+    return;
+  }
+  let html = `<table class="process-table">
+    <thead><tr><th>PID</th><th>Arrival</th><th>Burst</th><th></th></tr></thead><tbody>`;
+  processes.forEach((p, i) => {
+    const [fg] = getColor(p.colorIdx);
+    html += `<tr>
+      <td><span class="pid-badge" style="color:${fg};border-color:${fg}40;background:${fg}15">${p.pid}</span></td>
+      <td>${p.arrival}</td>
+      <td>${p.burst}</td>
+      <td><button class="btn-remove" onclick="removeProcess(${i})">✕</button></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+function removeProcess(i) {
+  processes.splice(i, 1);
+  renderTable();
+}
+
+function clearAll() {
+  processes = []; pidCounter = 1;
+  document.getElementById('pid').value = 'P1';
+  document.getElementById('arrival').value = '';
+  document.getElementById('burst').value = '';
+  renderTable();
+  document.getElementById('results-section').style.display = 'none';
+}
+
+// ─── Scheduling Algorithms ────────────────────────────────────────────────────
+
+function fcfs(procs) {
+  const sorted = [...procs].sort((a,b) => a.arrival - b.arrival || procs.indexOf(a) - procs.indexOf(b));
+  const gantt = [], results = {};
+  let time = 0;
+  for (const p of sorted) {
+    if (time < p.arrival) { gantt.push({pid:'IDLE', start:time, end:p.arrival}); time = p.arrival; }
+    gantt.push({pid:p.pid, start:time, end:time+p.burst, colorIdx:p.colorIdx});
+    results[p.pid] = { completion: time + p.burst, arrival: p.arrival, burst: p.burst };
+    time += p.burst;
+  }
+  return { gantt, results };
+}
+
+function sjf(procs) {
+  // Non-preemptive SJF
+  const rem = procs.map(p => ({...p}));
+  const gantt = [], results = {};
+  let time = 0, done = 0;
+  while (done < rem.length) {
+    const available = rem.filter(p => p.arrival <= time && !p.done);
+    if (available.length === 0) {
+      const next = rem.filter(p => !p.done).sort((a,b) => a.arrival - b.arrival)[0];
+      gantt.push({pid:'IDLE', start:time, end:next.arrival});
+      time = next.arrival; continue;
+    }
+    available.sort((a,b) => a.burst - b.burst || a.arrival - b.arrival);
+    const p = available[0];
+    gantt.push({pid:p.pid, start:time, end:time+p.burst, colorIdx:p.colorIdx});
+    results[p.pid] = { completion: time + p.burst, arrival: p.arrival, burst: p.burst };
+    time += p.burst;
+    p.done = true; done++;
+  }
+  return { gantt, results };
+}
+
+function roundRobin(procs, quantum) {
+  const queue = procs.map(p => ({...p, remaining: p.burst}));
+  queue.sort((a,b) => a.arrival - b.arrival);
+  const gantt = [], results = {};
+  let time = 0;
+  const readyQ = [];
+  const added = new Set();
+  let ptr = 0;
+
+  function enqueueArrivals() {
+    while (ptr < queue.length && queue[ptr].arrival <= time) {
+      if (!added.has(queue[ptr].pid)) { readyQ.push(queue[ptr]); added.add(queue[ptr].pid); }
+      ptr++;
+    }
+  }
+
+  enqueueArrivals();
+  if (readyQ.length === 0 && queue.length > 0) {
+    time = queue[0].arrival; enqueueArrivals();
+  }
+
+  let safety = 0;
+  while (readyQ.length > 0 && safety++ < 10000) {
+    const p = readyQ.shift();
+    const run = Math.min(quantum, p.remaining);
+    if (time < p.arrival) { gantt.push({pid:'IDLE', start:time, end:p.arrival}); time = p.arrival; }
+    gantt.push({pid:p.pid, start:time, end:time+run, colorIdx:p.colorIdx});
+    time += run;
+    p.remaining -= run;
+    enqueueArrivals();
+    if (p.remaining > 0) readyQ.push(p);
+    else results[p.pid] = { completion: time, arrival: p.arrival, burst: p.burst };
+    if (readyQ.length === 0 && ptr < queue.length) {
+      time = queue[ptr].arrival; enqueueArrivals();
+    }
+  }
+  return { gantt, results };
+}
+
+// ─── Simulate ─────────────────────────────────────────────────────────────────
+
+function simulate() {
+  if (processes.length < 1) { alert('Add at least one process first!'); return; }
+
+  const algo = document.querySelector('input[name="algo"]:checked').value;
+  const quantum = parseInt(document.getElementById('quantum').value) || 2;
+  let result;
+
+  if (algo === 'fcfs') result = fcfs(processes);
+  else if (algo === 'sjf') result = sjf(processes);
+  else result = roundRobin(processes, quantum);
+
+  const { gantt, results } = result;
+
+  // Merge consecutive same-pid idle blocks
+  const mergedGantt = [];
+  for (const b of gantt) {
+    const last = mergedGantt[mergedGantt.length - 1];
+    if (last && last.pid === b.pid && last.end === b.start) last.end = b.end;
+    else mergedGantt.push({...b});
+  }
+
+  renderGantt(mergedGantt, algo, quantum);
+  renderResults(results, algo, quantum, mergedGantt);
+  document.getElementById('results-section').style.display = 'block';
+  document.getElementById('results-section').scrollIntoView({behavior:'smooth'});
+}
+
+// ─── Render Gantt ─────────────────────────────────────────────────────────────
+
+function renderGantt(gantt, algo, quantum) {
+  const totalTime = gantt[gantt.length-1].end;
+  const minBlockW = 50;
+  const scale = Math.max(minBlockW, Math.min(120, 600 / Math.max(totalTime, 1)));
+
+  const chartEl = document.getElementById('gantt-chart');
+  const timesEl = document.getElementById('gantt-times');
+  chartEl.innerHTML = ''; timesEl.innerHTML = '';
+
+  gantt.forEach(b => {
+    const dur = b.end - b.start;
+    const w = Math.max(minBlockW, dur * scale);
+    const [fg, bg] = b.pid === 'IDLE' ? ['#5a7a9f', '#0a1628'] : getColor(b.colorIdx);
+    const block = document.createElement('div');
+    block.className = 'gantt-block' + (b.pid === 'IDLE' ? ' idle' : '');
+    block.style.width = w + 'px';
+    block.style.background = b.pid === 'IDLE' ? 'var(--surface2)' : `linear-gradient(135deg, ${bg}, ${bg}cc)`;
+    block.style.borderLeft = `3px solid ${fg}`;
+    block.style.color = fg;
+    block.innerHTML = `<span>${b.pid}</span><span style="font-size:9px;opacity:0.7">${dur}u</span>`;
+    block.title = `${b.pid}: ${b.start} → ${b.end} (${dur} units)`;
+    chartEl.appendChild(block);
+  });
+
+  // Time marks — placed absolutely at exact pixel positions matching block boundaries
+  timesEl.style.position = 'relative';
+  timesEl.style.height = '20px';
+
+  // Build cumulative pixel offsets for each block boundary
+  let pixelOffset = 0;
+  const boundaryPixels = new Map(); // time value → pixel x
+
+  gantt.forEach(b => {
+    const dur = b.end - b.start;
+    const w = Math.max(minBlockW, dur * scale);
+    if (!boundaryPixels.has(b.start)) boundaryPixels.set(b.start, pixelOffset);
+    pixelOffset += w;
+    if (!boundaryPixels.has(b.end)) boundaryPixels.set(b.end, pixelOffset);
+  });
+
+  // Set container width to match chart
+  timesEl.style.width = pixelOffset + 'px';
+
+  // Render each time label at its exact pixel boundary
+  [...boundaryPixels.entries()].sort((a,b)=>a[0]-b[0]).forEach(([t, px]) => {
+    const mark = document.createElement('div');
+    mark.className = 'gantt-time-mark';
+    mark.style.position = 'absolute';
+    mark.style.left = px + 'px';
+    mark.textContent = t;
+    timesEl.appendChild(mark);
+  });
+
+  const algoNames = { fcfs:'First Come First Serve (FCFS)', sjf:'Shortest Job First (SJF)', rr:`Round Robin (RR) — Quantum = ${quantum}` };
+  document.getElementById('gantt-title').textContent = `Gantt Chart  ·  ${algoNames[algo]}`;
+}
+
+// ─── Render Results ───────────────────────────────────────────────────────────
+
+function renderResults(results, algo, quantum, gantt) {
+  const rows = [];
+  let totalWT = 0, totalTAT = 0;
+
+  for (const [pid, r] of Object.entries(results)) {
+    const tat = r.completion - r.arrival;
+    const wt = tat - r.burst;
+    totalWT += wt; totalTAT += tat;
+    const colorIdx = processes.find(p => p.pid === pid)?.colorIdx ?? 0;
+    rows.push({ pid, arrival: r.arrival, burst: r.burst, completion: r.completion, tat, wt, colorIdx });
+  }
+
+  const n = rows.length;
+  const avgWT = (totalWT / n).toFixed(2);
+  const avgTAT = (totalTAT / n).toFixed(2);
+
+  // Stats cards
+  const statsEl = document.getElementById('stats-cards');
+  statsEl.innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Processes</div>
+      <div class="stat-value">${n}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg Waiting Time</div>
+      <div class="stat-value">${avgWT}</div>
+      <div class="stat-unit">time units</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg Turnaround</div>
+      <div class="stat-value">${avgTAT}</div>
+      <div class="stat-unit">time units</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Time</div>
+      <div class="stat-value">${gantt[gantt.length-1].end}</div>
+      <div class="stat-unit">time units</div>
+    </div>
+  `;
+
+  // Results table
+  const tbl = document.getElementById('results-table');
+  tbl.innerHTML = `<thead><tr>
+    <th>PID</th><th>Arrival</th><th>Burst</th><th>Completion</th>
+    <th>Turnaround Time</th><th>Waiting Time</th>
+  </tr></thead><tbody>
+  ${rows.map(r => {
+    const [fg] = getColor(r.colorIdx);
+    return `<tr>
+      <td><span class="pid-badge" style="color:${fg};border-color:${fg}40;background:${fg}15">${r.pid}</span></td>
+      <td>${r.arrival}</td><td>${r.burst}</td>
+      <td>${r.completion}</td>
+      <td class="highlight-val">${r.tat}</td>
+      <td class="highlight-val">${r.wt}</td>
+    </tr>`;
+  }).join('')}
+  <tr class="avg-row">
+    <td colspan="4">AVERAGE</td>
+    <td>${avgTAT}</td>
+    <td>${avgWT}</td>
+  </tr></tbody>`;
+
+  // Comment
+  renderComment(algo, quantum, rows, avgWT, avgTAT);
+}
+
+function renderComment(algo, quantum, rows, avgWT, avgTAT) {
+  const box = document.getElementById('comment-box');
+  const maxWT = Math.max(...rows.map(r => r.wt));
+  const minWT = Math.min(...rows.map(r => r.wt));
+
+  if (algo === 'fcfs') {
+    box.innerHTML = `<strong>FCFS Analysis:</strong> First Come First Serve is a <strong>non-preemptive</strong> algorithm that schedules processes in order of arrival. It is simple to implement but can suffer from the <strong>convoy effect</strong> — where short processes get stuck behind a long one. In this run, the average waiting time was <strong>${avgWT} units</strong>. The waiting time ranged from <strong>${minWT}</strong> to <strong>${maxWT}</strong> units, showing ${maxWT - minWT > 5 ? 'significant' : 'minimal'} disparity. FCFS is fair in terms of arrival order but not in terms of burst time.`;
+  } else if (algo === 'sjf') {
+    box.innerHTML = `<strong>SJF Analysis:</strong> Shortest Job First is a <strong>non-preemptive</strong> algorithm that always picks the process with the smallest burst time among those available. It is theoretically <strong>optimal for minimizing average waiting time</strong>. This run achieved an average waiting time of <strong>${avgWT} units</strong>. However, SJF can cause <strong>starvation</strong> for long processes if short ones keep arriving. It also requires knowledge of burst times in advance, which is not always practical.`;
+  } else {
+    const smallQ = quantum <= 2;
+    const largeQ = quantum >= Math.max(...rows.map(r=>r.burst));
+    box.innerHTML = `<strong>Round Robin Analysis (Q=${quantum}):</strong> RR is a <strong>preemptive</strong> algorithm that gives each process a fixed time slice (quantum = <strong>${quantum} units</strong>). Average waiting time was <strong>${avgWT} units</strong>, turnaround was <strong>${avgTAT} units</strong>.<br><br>
+    <strong>Effect of time quantum:</strong><br>
+    ${smallQ ? `• <strong>Small quantum (${quantum})</strong>: High context switching overhead. Each process gets CPU frequently, improving responsiveness, but overall throughput may decrease due to frequent switching.<br>` : ''}
+    ${largeQ ? `• <strong>Large quantum (≥ max burst)</strong>: RR degenerates to FCFS since each process finishes in one turn, eliminating the benefit of time-sharing.<br>` : ''}
+    ${!smallQ && !largeQ ? `• <strong>Moderate quantum (${quantum})</strong>: A balanced trade-off between responsiveness and context switching cost.<br>` : ''}
+    • Increasing Q reduces context switches but hurts interactivity. Decreasing Q improves fairness but increases overhead. The ideal quantum is typically slightly larger than the average burst time.`;
+  }
+}
+
+// ─── Keyboard shortcut (Enter to add) ────────────────────────────────────────
+['pid','arrival','burst'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') addProcess(); });
+});
+
+// ─── Init demo ───────────────────────────────────────────────────────────────
+(function init() {
+  [['P1',0,8],['P2',1,4],['P3',2,9],['P4',3,5]].forEach(([pid,arrival,burst]) => {
+    processes.push({pid, arrival, burst, colorIdx: processes.length});
+  });
+  pidCounter = 5;
+  document.getElementById('pid').value = 'P5';
+  renderTable();
+})();
+</script>
+</body>
+</html>
